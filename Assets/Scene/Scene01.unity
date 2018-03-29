@@ -299,6 +299,30 @@ MonoBehaviour:
   mainScoreBoard: {fileID: 901758575}
   mainNameText: {fileID: 760650962}
   mainScoreText: {fileID: 102108622}
+  lerpCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 2
+      time: -0.0020523071
+      value: 0.9721091
+      inSlope: 0.044173595
+      outSlope: 0.044173595
+      tangentMode: 0
+    - serializedVersion: 2
+      time: 0.7650944
+      value: 0.8676126
+      inSlope: -0.43784955
+      outSlope: -0.43784955
+      tangentMode: 0
+    - serializedVersion: 2
+      time: 1.1960678
+      value: 0.44783765
+      inSlope: -0.039562233
+      outSlope: -0.039562233
+      tangentMode: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 0
 --- !u!1 &637260405
 GameObject:
   m_ObjectHideFlags: 0
@@ -568,7 +592,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1669256520}
   m_Layer: 5
-  m_Name: ScorePrefab
+  m_Name: Main Scoreboard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

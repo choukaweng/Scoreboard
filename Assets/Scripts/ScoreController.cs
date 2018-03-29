@@ -7,9 +7,12 @@ public class ScoreController : MonoBehaviour {
 
     public Image mainScoreBoard;
     public Text mainNameText, mainScoreText;
+    public AnimationCurve lerpCurve;
 
     private List<Score> scoreList;
     private Score mainScore;
+    private bool startLerping = false;
+    private float lerpScale = 0f, curveTime = 0f;
 
 	// Use this for initialization
 	void Start ()
@@ -26,11 +29,22 @@ public class ScoreController : MonoBehaviour {
 		if(Input.GetKeyDown(KeyCode.Space))
         {
             Debug.Log("Lerp");
-            Score newScore = new Score(10f, 100f, "First Team", Vector3.zero);
+            Score newScore = new Score(80f, 100f, "First Team", Vector3.zero);
             mainScore.SetScoreData(newScore.actualMark, newScore.totalMark, newScore.name, Vector3.zero);
             mainScore.startLerping = true;
         }
-        mainScore.ShowValue();
+
+        startLerping = mainScore.startLerping;
+        if (!mainScore.completed && startLerping)
+        {
+            curveTime += Time.deltaTime;
+            lerpScale = lerpCurve.Evaluate(curveTime);
+            mainScore.ShowValue(lerpScale);
+        }
+        else
+        {
+            curveTime = 0f;
+        }
 	}
 
     private void StartLerping()
@@ -49,12 +63,13 @@ public class Score
     private const string path = "Prefabs/ScorePrefab";
     private Text nameText, scoreText;
     private Vector3 position = Vector3.zero;
-    private bool completed = false;
+
+    public bool completed = false;
 
     public bool startLerping = false;
     public string name = "";
 
-    public float currentMark = 0f, actualMark, totalMark, lerpScale = 1f, lerpTime = 0.0045f;
+    public float currentMark = 0f, actualMark, totalMark;
 
     public Score() { }
 
@@ -98,38 +113,22 @@ public class Score
         nameText.text = name;
     }
 
-    public void ShowValue()
+    public void ShowValue(float lerpScale)
     {
         if(startLerping)
         {
+            float lerpTime = lerpScale * Time.deltaTime;
             currentMark = Mathf.Lerp(currentMark, actualMark, lerpTime);
             scoreboard.fillAmount = currentMark / totalMark;
-            if (lerpScale > 0.5f)
-            {
-                lerpScale -= Time.deltaTime;
-            }
-            else
-            {
-                lerpScale -= Time.deltaTime * Time.deltaTime;
-            }
-            
+
             if(!completed)
             {
-                if (lerpTime >= 0.0045f)
+                if(actualMark - currentMark <= 0.1f)
                 {
-                    lerpTime = lerpScale * Time.deltaTime;
-                }
-                else
-                {
-                    lerpTime = 1f;
                     completed = true;
                     scoreText.text = actualMark.ToString();
                     startLerping = false;
                 }
-            }
-            else
-            {
-                completed = false;
             }
         }
     }
