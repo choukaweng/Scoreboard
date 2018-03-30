@@ -15,6 +15,8 @@ public class ScoreController : MonoBehaviour {
     public Text mainNameText, mainScoreText;
     public GameObject ScoreEntryPanel, Leaderboard;
     public AnimationCurve lerpCurve;
+    //To slow down the lerping, the larger the value the slower
+    public float dampenedValue = 1f;
 
     private List<Score> scoreList;
     private Score mainScore;
@@ -327,6 +329,7 @@ public class Score
         scoreData.name = name;
         GameObject scorePrefab = Resources.Load<GameObject>(path);
         scorePrefab.transform.position = position;
+        controller = GameObject.FindObjectOfType<ScoreController>();
         foreach(Transform t in scorePrefab.transform)
         {
             if(t.name == "Scale")
@@ -379,8 +382,9 @@ public class Score
     {
         if (!completed)
         {
-            float lerpTime = lerpScale * Time.deltaTime;
+            float lerpTime = lerpScale * Time.deltaTime / controller.dampenedValue;
             currentMark = Mathf.Lerp(currentMark, scoreData.actualMark, lerpTime);
+            scoreText.text = ((int)currentMark).ToString();
             scoreboard.fillAmount = currentMark / scoreData.totalMark;
         }
 
