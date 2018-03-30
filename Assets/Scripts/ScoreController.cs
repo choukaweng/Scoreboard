@@ -76,7 +76,7 @@ public class ScoreController : MonoBehaviour {
                 mainScoreText.text = "";
                 mainNameText.text = "";
                 OnResetScoreboard.Invoke();
-                
+                ClearEvents();
 
                 Score newScore = scoreList[scoreList.Count - 1];
                 newScore.SetScoreObject(mainScoreBoard, mainNameText, mainScoreText);
@@ -117,9 +117,8 @@ public class ScoreController : MonoBehaviour {
         {
             curveTime += Time.deltaTime;
             float lerpScale = lerpCurve.Evaluate(curveTime);
-            OnStartLerping.Invoke(lerpScale);
 
-            Invoke("ClearEvents", 15f);
+            OnStartLerping.Invoke(lerpScale);
         }
     }
 
