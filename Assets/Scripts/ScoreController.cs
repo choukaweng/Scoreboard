@@ -7,6 +7,7 @@ using System;
 using System.Xml;
 using System.Xml.Serialization;
 using System.IO;
+using System.Text;  
 
 public class ScoreController : MonoBehaviour {
 
@@ -21,16 +22,19 @@ public class ScoreController : MonoBehaviour {
     private bool startLerping = false;
     private class LerpEvent : UnityEvent<float> { }
     private LerpEvent OnStartLerping;
+    private UnityEvent OnResetScoreboard;
 
     //Score Entry Panel
     private InputField teamNameInputField, actualScoreInputField, totalScoreInputField;
     private bool showScoreEntryPanel = false;
+    private Color gray;
 
     //Leaderboard
     private GameObject sampleData;
     private bool showLeaderboard = false;
-    private Vector3 dataPosition = new Vector3(0f, 100f, 0f);
-    private Vector3 offset = new Vector3(0f, 34f, 0f);
+    private Vector3 firstColumnPosition = new Vector3(-155f, -45f, 0f);
+    private Vector3 secondColumnPosition = new Vector3(147f, -45f, 0f);
+    private Vector3 offset = new Vector3(0f, 45f, 0f);
 
     //XML Database
     private string databaseName = "Data";
@@ -41,13 +45,13 @@ public class ScoreController : MonoBehaviour {
 	void Start ()
     {
         OnStartLerping = new LerpEvent();
+        OnResetScoreboard = new UnityEvent();
 
         scoreList = new List<Score>();
         container = new ScoreContainer();
 
-        sampleData = Leaderboard.transform.Find("SampleData").gameObject;
-        sampleData.SetActive(false);
-
+        sampleData = Resources.Load("Prefabs/SampleData") as GameObject;
+        
         mainScore = new Score();
         mainScore.Initialize(this);
         mainScore.SetScoreObject(mainScoreBoard, mainNameText, mainScoreText);
@@ -58,6 +62,8 @@ public class ScoreController : MonoBehaviour {
 
         showScoreEntryPanel = ScoreEntryPanel.activeInHierarchy;
         showLeaderboard = Leaderboard.activeInHierarchy;
+
+        gray = teamNameInputField.placeholder.GetComponent<Text>().color;
     }
 	
 	// Update is called once per frame
@@ -65,16 +71,32 @@ public class ScoreController : MonoBehaviour {
     {
 		if(Input.GetKeyDown(KeyCode.Space))
         {
-            Score newScore = scoreList[scoreList.Count - 1];
-            newScore.SetScoreObject(mainScoreBoard, mainNameText, mainScoreText);
-            mainScore.SetScoreData(newScore.scoreData.actualMark, newScore.scoreData.totalMark, newScore.scoreData.name, Vector3.zero);
-
-            foreach(Score score in scoreList)
+            if(scoreList.Count > 0)
             {
-                OnStartLerping.AddListener(score.ShowValue);
-            }
+                mainScoreText.text = "";
+                mainNameText.text = "";
+                OnResetScoreboard.Invoke();
+                
 
-            startLerping = true;
+                Score newScore = scoreList[scoreList.Count - 1];
+                newScore.SetScoreObject(mainScoreBoard, mainNameText, mainScoreText);
+                mainScore.SetScoreData(newScore.scoreData.actualMark, newScore.scoreData.totalMark, newScore.scoreData.name, Vector3.zero);
+
+                OnStartLerping.AddListener(newScore.ShowValue);
+                OnResetScoreboard.AddListener(newScore.Reset);
+
+                //foreach (Score score in scoreList)
+                //{
+                //    OnStartLerping.AddListener(score.ShowValue);
+                //    OnResetScoreboard.AddListener(score.Reset);
+                //}
+
+                startLerping = true;
+            }
+            else
+            {
+                Debug.Log("Score list is empty");
+            }
         }
 
         //Show Score Entry Panel
@@ -105,14 +127,19 @@ public class ScoreController : MonoBehaviour {
     private void ClearEvents()
     {
         OnStartLerping.RemoveAllListeners();
+        OnResetScoreboard.RemoveAllListeners();
         startLerping = false;
+        curveTime = 0f;
     }
 
     private void CreateScore()
     {
         bool valid = false;
+        float _actualScore = 0f, _totalScore = 0f;
+        float.TryParse(actualScoreInputField.text, out _actualScore);
+        float.TryParse(totalScoreInputField.text, out _totalScore);
 
-        if(teamNameInputField.text != "" && actualScoreInputField.text != "" && totalScoreInputField.text != "")
+        if (teamNameInputField.text != "" && actualScoreInputField.text != "" && totalScoreInputField.text != "" && _actualScore < _totalScore)
         {
             valid = true;
         }
@@ -130,17 +157,29 @@ public class ScoreController : MonoBehaviour {
             {
                 totalScoreInputField.placeholder.GetComponent<Text>().color = Color.red;
             }
+            if(_actualScore > _totalScore)
+            {
+                actualScoreInputField.textComponent.color = Color.red;
+                totalScoreInputField.textComponent.color = Color.red;
+            }
         }
 
         if (valid)
         {
-            float _actualScore = 0f, _totalScore = 0f;
-            float.TryParse(actualScoreInputField.text, out _actualScore);
-            float.TryParse(totalScoreInputField.text, out _totalScore);
             Score newScore = new Score(_actualScore, _totalScore, teamNameInputField.text, Vector3.zero);
             container.scoreDataList.Add(newScore.scoreData);
             UpdateLeaderboard(newScore.scoreData);
             scoreList.Add(newScore);
+
+            teamNameInputField.text = "";
+            actualScoreInputField.text = "";
+            totalScoreInputField.text = "";
+            teamNameInputField.textComponent.color = Color.black;
+            teamNameInputField.placeholder.GetComponent<Text>().color = gray;
+            actualScoreInputField.textComponent.color = Color.black;
+            actualScoreInputField.placeholder.GetComponent<Text>().color = gray;
+            totalScoreInputField.textComponent.color = Color.black;
+            totalScoreInputField.placeholder.GetComponent<Text>().color = gray;
 
             showScoreEntryPanel = !showScoreEntryPanel;
             ScoreEntryPanel.SetActive(showScoreEntryPanel);
@@ -153,6 +192,7 @@ public class ScoreController : MonoBehaviour {
     {
         mainScore.SetScoreData(score.scoreData.actualMark, score.scoreData.totalMark, score.scoreData.name, Vector3.zero);
         OnStartLerping.AddListener(mainScore.ShowValue);
+        OnResetScoreboard.AddListener(mainScore.Reset);
         startLerping = true;
     }
 
@@ -180,6 +220,7 @@ public class ScoreController : MonoBehaviour {
 
             var stream = new FileStream(_path, FileMode.Create);
             xml.Save(stream);
+            stream.Close();
         }
         else
         {
@@ -200,6 +241,9 @@ public class ScoreController : MonoBehaviour {
                 //string debug = "";
                 foreach (ScoreData data in container.scoreDataList)
                 {
+                    Score newScore = new Score(data.actualMark, data.totalMark, data.name, Vector3.zero);
+                    scoreList.Add(newScore);
+
                     UpdateLeaderboard(data);
                    // debug += data.name + " - " + data.actualMark + " / " + data.totalMark + "\n";
                 }
@@ -209,13 +253,25 @@ public class ScoreController : MonoBehaviour {
 
     private void UpdateLeaderboard(ScoreData newScore)
     {
-        GameObject newData = Instantiate<GameObject>(sampleData, Leaderboard.transform);
+        GameObject newData = Instantiate<GameObject>(sampleData, Leaderboard.transform.Find("Content"));
         newData.name = newScore.name;
         newData.transform.Find("TeamName").GetComponent<Text>().text = newScore.name;
         newData.transform.Find("Score").GetComponent<Text>().text = newScore.actualMark.ToString();
-        newData.transform.localPosition = dataPosition;
-        newData.SetActive(true);
-        dataPosition -= offset;
+
+        Vector3 position = Vector3.zero;
+        if(container.scoreDataList.IndexOf(newScore) <= 5)
+        {
+            position = firstColumnPosition;
+            firstColumnPosition -= offset;
+        }
+        else
+        {
+            position = secondColumnPosition;
+            secondColumnPosition -= offset;
+        }
+
+        newData.transform.localPosition = position;
+        
     }
 
     #endregion
@@ -322,11 +378,6 @@ public class Score
 
     public void ShowValue(float lerpScale)
     {
-        if(scoreboard.fillAmount == scoreData.actualMark && completed)
-        {
-            Reset();
-        }
-
         if (!completed)
         {
             float lerpTime = lerpScale * Time.deltaTime;
@@ -339,6 +390,7 @@ public class Score
             completed = true;
             scoreText.text = scoreData.actualMark.ToString();
             scoreboard.fillAmount = scoreData.actualMark / scoreData.totalMark;
+            currentMark = scoreData.actualMark;
         }
     }
 
@@ -346,6 +398,7 @@ public class Score
     {
         scoreboard.fillAmount = 0f;
         completed = false;
+        currentMark = 0f;
     }
 }
 #endregion
@@ -358,8 +411,11 @@ public static class XML_Serializer
         string _path = Application.streamingAssetsPath + "/Data.xml";
         XmlSerializer serializer = new XmlSerializer(typeof(T));
         var stream = new FileStream(_path, FileMode.Create);
+        XmlWriter writer = XmlWriter.Create(stream);
+        writer.Settings.Encoding = Encoding.UTF8;
 
-        serializer.Serialize(stream, container);
+        serializer.Serialize(writer, container);
+        stream.Close();
     }
 
     public static T Deserialize<T>()
@@ -369,6 +425,8 @@ public static class XML_Serializer
         var stream = new FileStream(_path, FileMode.Open);
 
         T container = (T)serializer.Deserialize(stream);
+
+        stream.Close();
 
         return container;
     }
